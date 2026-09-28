@@ -1,0 +1,165 @@
+// Orbital — modelo de dados.
+//
+// Nasceu espelhando os antigos data/*.json, com três ganhos que o JSON não dava:
+//   1. Subcategoria deixa de ter id ambíguo (ver @@unique em Subcategory).
+//   2. Relações ganham integridade referencial (não existe aresta órfã).
+//   3. updatedAt passa a ser mantido pelo banco, não pela mão.
+//
+// Convenção de ids: PK é cuid (estável, nunca muda) + `slug` único legível
+// ("amd", "tecnologia"). Slug como PK pareceria mais simples até o primeiro
+// rename quebrar todas as relações que apontam pra ele.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ── Taxonomia ───────────────────────────────────────────────────────────────
+
+model Category {
+  id    String @id @default(cuid())
+  /// Id legível usado na URL e nos filtros: "tecnologia", "fornecedores".
+  slug  String @unique
+  label String
+  /// Hex usado pelos pins do mapa, pelos logos e pelos filtros.
+  /// Escolhido de uma paleta fechada (`CATEGORY_SWATCHES`), não digitado: hex
+  /// inválido não dá erro — o `color-mix` descarta a declaração e o MapLibre
+  /// não avisa, e o pin some do mapa em silêncio.
+  color String
+  /// Descrição curta. `@default("")` porque o formulário a trata como opcional
+  /// e a coluna é NOT NULL — sem o default, criar categoria sem descrição
+  /// falharia no banco.
+  blurb String @default("")
+
+  /// Chave do ícone no registry de `lib/categories.ts` — a **escolha**, não o
+  /// componente React, que não cabe numa coluna. Nullable: categoria sem
+  /// escolha feita cai no ícone genérico.
+  iconKey String?
+
+  /// Ordem de exibição nos filtros e no formulário.
+  sortOrder Int @default(0)
+
+  subcategories Subcategory[]
+  companies     Company[]
+}
+
+model Subcategory {
+  id    String @id @default(cuid())
+  /// NÃO é único globalmente — "logistica" existe em Robótica e em Fornecedores.
+  slug  String
+  label String
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  sortOrder Int @default(0)
+
+  companies Company[]
+
+  /// O par (categoria, slug) é que é único. É esta linha que resolve na origem
+  /// a ambiguidade que a UI hoje contorna com a chave composta "categoria:sub".
+  @@unique([categoryId, slug])
+  @@index([categoryId])
+}
+
+// ── Empresas ────────────────────────────────────────────────────────────────
+
+enum CompanyStatus {
+  interesse
+  avaliando
+  ativa
+  arquivada
+}
+
+model Company {
+  id   String @id @default(cuid())
+  slug String @unique
+  name String
+
+  /// 1 categoria (obrigatória) + N subcategorias (m2m implícita).
+  /// Restrict: apagar uma categoria que ainda tem empresas deve falhar, em vez
+  /// de deixar empresa órfã.
+  categoryId    String
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  subcategories Subcategory[]
+
+  // ── Localização (cidade/país aprox., resolvida por geocoding) ──
+  city    String
+  country String
+  lat     Float
+  lng     Float
+
+  // ── Conteúdo ──
+  description String
+  website     String?
+  social      String?
+  foundedYear Int?
+
+  // ── Empresas de maior porte ──
+  /// Float, não BigInt: valores como 230e9 cabem folgados num double (< 2^53)
+  /// e BigInt não atravessa a fronteira Server→Client sem serialização manual.
+  /// É número de vitrine, não valor transacionado.
+  marketCap Float?
+  ceo       String?
+
+  /// Produto específico que torna a empresa interessante (texto livre).
+  featuredProduct String?
+  /// Marca a empresa para o futuro acompanhamento de notícias.
+  trackNews       Boolean @default(false)
+
+  // ── CRM ──
+  status   CompanyStatus @default(interesse)
+  favorite Boolean       @default(false)
+  /// 0 = normal · 1 = alta · 2 = máxima. Int em vez de enum para preservar a
+  /// ordenação natural (enum do Postgres ordena por posição declarada).
+  priority Int           @default(0)
+
+  // ── Metadados ──
+  /// Data da captura — o "quando eu vi isso" que motivou o projeto.
+  addedAt   DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  relationsAsSource Relation[] @relation("RelationSource")
+  relationsAsTarget Relation[] @relation("RelationTarget")
+
+  @@index([categoryId])
+  @@index([status])
+}
+
+// ── Relações entre empresas ─────────────────────────────────────────────────
+
+enum RelationType {
+  parceria
+  fornecedor
+  subsidiaria
+}
+
+/// Aresta entre duas empresas, entidade própria (nunca dentro da empresa) para
+/// que a conexão exista exatamente uma vez e não possa ficar "meio ligada".
+/// `parceria` é simétrica; `fornecedor` e `subsidiaria` são direcionadas
+/// (source → target) e ganham seta no mapa.
+model Relation {
+  id String @id @default(cuid())
+
+  /// Cascade: apagar uma empresa apaga as arestas que a tocam — sem isso a FK
+  /// bloquearia o delete ou sobraria aresta apontando para o vazio.
+  sourceId String
+  source   Company @relation("RelationSource", fields: [sourceId], references: [id], onDelete: Cascade)
+  targetId String
+  target   Company @relation("RelationTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  type  RelationType
+  label String?
+  since Int?
+
+  /// Impede cadastrar duas vezes a mesma conexão do mesmo tipo. Dois tipos
+  /// diferentes entre as mesmas empresas continuam permitidos (uma empresa
+  /// pode ser parceira E fornecedora de outra).
+  @@unique([sourceId, targetId, type])
+  @@index([sourceId])
+  @@index([targetId])
+}

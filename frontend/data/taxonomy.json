@@ -1,0 +1,131 @@
+[
+  {
+    "id": "saude",
+    "label": "Saúde",
+    "color": "#34d399",
+    "iconKey": "activity",
+    "blurb": "Clínicas, diagnóstico e cuidado",
+    "subcategories": [
+      {
+        "id": "diagnostico",
+        "label": "Diagnóstico"
+      },
+      {
+        "id": "telemedicina",
+        "label": "Telemedicina"
+      },
+      {
+        "id": "dispositivos",
+        "label": "Dispositivos"
+      },
+      {
+        "id": "biotech",
+        "label": "Biotech"
+      }
+    ]
+  },
+  {
+    "id": "energia",
+    "label": "Energia",
+    "color": "#fbbf24",
+    "iconKey": "zap",
+    "blurb": "Geração, rede e armazenamento",
+    "subcategories": [
+      {
+        "id": "solar",
+        "label": "Solar"
+      },
+      {
+        "id": "eolica",
+        "label": "Eólica"
+      },
+      {
+        "id": "armazenamento",
+        "label": "Armazenamento"
+      },
+      {
+        "id": "mobilidade",
+        "label": "Mobilidade elétrica"
+      }
+    ]
+  },
+  {
+    "id": "tecnologia",
+    "label": "Tecnologia",
+    "color": "#38bdf8",
+    "iconKey": "cpu",
+    "blurb": "Software, hardware e infraestrutura",
+    "subcategories": [
+      {
+        "id": "ia",
+        "label": "IA"
+      },
+      {
+        "id": "cloud",
+        "label": "Cloud / Infra"
+      },
+      {
+        "id": "ciberseg",
+        "label": "Cibersegurança"
+      },
+      {
+        "id": "dados",
+        "label": "Dados"
+      },
+      {
+        "id": "hardware",
+        "label": "Hardware / Semicondutores"
+      }
+    ]
+  },
+  {
+    "id": "robotica",
+    "label": "Robótica",
+    "color": "#a78bfa",
+    "iconKey": "bot",
+    "blurb": "Automação e robôs",
+    "subcategories": [
+      {
+        "id": "industrial",
+        "label": "Industrial"
+      },
+      {
+        "id": "logistica",
+        "label": "Logística"
+      },
+      {
+        "id": "drones",
+        "label": "Drones"
+      },
+      {
+        "id": "humanoides",
+        "label": "Humanoides"
+      }
+    ]
+  },
+  {
+    "id": "fornecedores",
+    "label": "Fornecedores",
+    "color": "#f59e0b",
+    "iconKey": "package",
+    "blurb": "Parceiros de suprimento (Brasil e China)",
+    "subcategories": [
+      {
+        "id": "componentes-eletronicos",
+        "label": "Componentes eletrônicos"
+      },
+      {
+        "id": "materias-primas",
+        "label": "Matérias-primas"
+      },
+      {
+        "id": "manufatura",
+        "label": "Manufatura / OEM"
+      },
+      {
+        "id": "logistica",
+        "label": "Logística"
+      }
+    ]
+  }
+]

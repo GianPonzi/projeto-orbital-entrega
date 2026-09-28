@@ -1,0 +1,15 @@
+# Refeitos dentro do container — copiar os do Mac traria binários da
+# plataforma errada e deixaria a imagem pesada.
+node_modules
+.next
+generated
+next-env.d.ts
+*.tsbuildinfo
+
+# Nenhum segredo entra na imagem: as variáveis chegam pelo compose, na subida.
+.env*
+
+Dockerfile
+.dockerignore
+npm-debug.log*
+.DS_Store

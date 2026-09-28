@@ -1,0 +1,76 @@
+name: orbital
+
+services:
+  db:
+    image: postgres:18
+    container_name: orbital-db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-orbital}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_DB: ${POSTGRES_DB:-orbital}
+    volumes:
+      - orbital-db:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [app-net]
+    restart: unless-stopped
+
+  migrate:
+    build:
+      context: ./frontend
+      target: migrator
+    container_name: orbital-migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-orbital}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-orbital}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [app-net]
+    restart: "no"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runner
+      args:
+        NEXT_PUBLIC_MAPTILER_KEY: ${NEXT_PUBLIC_MAPTILER_KEY:-}
+    container_name: orbital-frontend
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-orbital}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-orbital}
+      APP_PASSWORD: ${APP_PASSWORD:?defina APP_PASSWORD no .env}
+      SESSION_SECRET: ${SESSION_SECRET:?defina SESSION_SECRET no .env}
+      BACKEND_URL: http://backend:8000
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [app-net]
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    container_name: orbital-backend
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    environment:
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://localhost:8000/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks: [app-net]
+    restart: unless-stopped
+
+volumes:
+  orbital-db:
+
+networks:
+  app-net:
+    driver: bridge
